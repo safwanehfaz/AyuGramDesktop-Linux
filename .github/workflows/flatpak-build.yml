@@ -1,0 +1,116 @@
+name: Build AyuGram Flatpak (Simple)
+
+# Triggers: When to run this script
+on:
+  # Option 1: Run manually from GitHub Actions tab (For testing)
+  workflow_dispatch:
+  
+  # Option 2: Run automatically when you push a version tag (e.g., v1.0)
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    name: Build Flatpak
+    runs-on: ubuntu-latest # Uses GitHub's free servers
+    permissions:
+      contents: write # Needed to upload the release files
+
+    steps:
+      # Step 1: Clean up disk space to avoid "Out of space" errors
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          docker-images: true
+
+      # Step 2: Download your code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive' # Downloads all necessary libraries
+          fetch-depth: 0
+
+      # Step 3: Check if API Keys are present in Secrets
+      - name: Verify Secrets
+        run: |
+          if [ -z "${{ secrets.API_ID }}" ] || [ -z "${{ secrets.API_HASH }}" ]; then
+            echo "::error:: Please add API_ID and API_HASH in Repo Settings > Secrets"
+            exit 1
+          fi
+
+      # Step 4: Setup Caching (Speeds up future builds)
+      - name: Setup Cache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
+      # Step 5: Build the binary using Docker (Official Environment)
+      - name: Build Binary in Docker
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+        run: |
+          mkdir -p .ccache
+          chmod 777 .ccache
+          
+          # Run the build command inside the Telegram Docker image
+          docker run --rm \
+            -v "$PWD:/usr/src/tdesktop" \
+            -v "$PWD/.ccache:/ccache" \
+            ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
+            /bin/bash -c "dnf install -y ccache && \
+                          export CCACHE_DIR=/ccache && \
+                          export CCACHE_COMPRESS=1 && \
+                          export CC='ccache gcc' && \
+                          export CXX='ccache g++' && \
+                          /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
+                            -D TDESKTOP_API_ID=$API_ID \
+                            -D TDESKTOP_API_HASH=$API_HASH \
+                            -D USE_CCACHE=ON"
+
+      # Step 6: Reduce file size
+      - name: Strip Binary
+        run: strip out/Release/AyuGram
+
+      # Step 7: Prepare files for Flatpak packaging
+      - name: Prepare Flatpak Files
+        run: |
+          mkdir -p build-workspace
+          cp out/Release/AyuGram build-workspace/
+          # Copy icons and desktop files
+          cp -r docs/assets/flatpak-files/* build-workspace/ 
+
+      # Step 8: Install Flatpak tools on the server
+      - name: Install Flatpak Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y org.gnome.Sdk//48 org.gnome.Platform//48
+
+      # Step 9: Create the Flatpak file
+      - name: Build Flatpak Bundle
+        working-directory: ./build-workspace
+        run: |
+          flatpak-builder --repo=repo --force-clean --disable-rofiles-fuse build-dir com.ayugram.desktop.yml
+          flatpak build-bundle repo ayugram.flatpak com.ayugram.desktop
+
+      # Step 10: Upload the file so you can download it (For Testing)
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ayugram-flatpak-test-build
+          path: build-workspace/ayugram.flatpak
+
+      # Step 11: Create a Release (Only runs if you pushed a Tag)
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') # Only runs on tags like v1.0
+        with:
+          files: build-workspace/ayugram.flatpak
+          body: "Automatic build triggered by tag."
