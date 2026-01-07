@@ -1,0 +1,111 @@
+name: Build AyuGram Debian package
+
+on:
+  workflow_dispatch: # Allows manual run from the Actions tab
+  push:
+    tags:
+      - 'v*' # Triggers build when you push a version tag like v6.3.10
+
+jobs:
+  build-deb:
+    name: Build .deb for Debian and Ubuntu
+    runs-on: ubuntu-latest # Using GitHub's free runner
+    permissions:
+      contents: write
+
+    steps:
+      # Step 1: Clean up and checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      # Step 2: Clear space to prevent "Disk Full" errors
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          docker-images: true
+
+      # Step 3: Verify if API credentials are set in Secrets
+      - name: Verify Secrets
+        run: |
+          if [ -z "${{ secrets.API_ID }}" ] || [ -z "${{ secrets.API_HASH }}" ]; then
+            echo "::error:: API_ID or API_HASH secret is missing!"
+            exit 1
+          fi
+
+      # Step 4: Setup Caching to speed up future builds
+      - name: Setup Cache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-deb-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-deb-ccache-
+
+      # Step 5: Build AyuGram inside Docker container (Official Environment)
+      - name: Build Binary in Docker
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+        run: |
+          mkdir -p .ccache
+          chmod 777 .ccache
+          docker run --rm \
+            -u 0 \
+            -v "$PWD:/usr/src/tdesktop" \
+            -v "$PWD/.ccache:/ccache" \
+            ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
+            /bin/bash -c "dnf install -y ccache && \
+                          export CCACHE_DIR=/ccache && \
+                          /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
+                            -D TDESKTOP_API_ID=$API_ID \
+                            -D TDESKTOP_API_HASH=$API_HASH \
+                            -D USE_CCACHE=ON"
+
+      # Step 6: Fix permissions so GitHub Runner can access root-owned files
+      - name: Fix File Permissions
+        run: sudo chown -R $USER:$USER out/
+
+      # Step 7: Create the Debian package structure
+      - name: Prepare Debian Package Directory
+        run: |
+          mkdir -p pkgroot/usr/bin
+          mkdir -p pkgroot/DEBIAN
+          
+          # Copy binary and set executable permissions
+          cp out/Release/AyuGram pkgroot/usr/bin/
+          chmod +x pkgroot/usr/bin/AyuGram
+          
+          # Strip the binary to reduce file size
+          strip pkgroot/usr/bin/AyuGram
+
+          # Create the control file with cross-distro dependencies
+          # Version set to 6.3.10 as requested
+          cat <<EOF > pkgroot/DEBIAN/control
+          Package: ayugram-desktop
+          Version: 6.3.10
+          Section: net
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Safwan Ehfaz Saad
+          Depends: libc6 (>= 2.34), libstdc++6 (>= 12), libglib2.0-0 | libglib2.0-0t64, libgcc-s1, libwayland-client0, libpulse0
+          Description: AyuGram Desktop Client. 
+           Optimized build for Debian 13 and Ubuntu. 
+           This package uses dual dependency logic for better compatibility.
+          EOF
+
+      # Step 8: Pack the files into a .deb archive
+      - name: Build .deb File
+        run: |
+          sudo apt-get install -y fakeroot
+          fakeroot dpkg-deb --build --root-owner-group pkgroot ayugram-desktop.deb
+
+      # Step 9: Upload the final .deb file as an artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ayugram-desktop-deb
+          path: ayugram-desktop.deb
