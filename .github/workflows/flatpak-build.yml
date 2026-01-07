@@ -1,4 +1,4 @@
-name: Build AyuGram Flatpak (Simple)
+name: Build AyuGram Flatpak
 
 # Triggers: When to run this script
 on:
@@ -109,11 +109,3 @@ jobs:
         with:
           name: ayugram-flatpak-test-build
           path: build-workspace/ayugram.flatpak
-
-      # Step 11: Create a Release (Only runs if you pushed a Tag)
-      - name: Publish Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') # Only runs on tags like v1.0
-        with:
-          files: build-workspace/ayugram.flatpak
-          body: "Automatic build triggered by tag."
