@@ -58,8 +58,9 @@ jobs:
           mkdir -p .ccache
           chmod 777 .ccache
           
-          # Run the build command inside the Telegram Docker image
+          # Added "-u 0" to run as root inside container
           docker run --rm \
+            -u 0 \
             -v "$PWD:/usr/src/tdesktop" \
             -v "$PWD/.ccache:/ccache" \
             ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
