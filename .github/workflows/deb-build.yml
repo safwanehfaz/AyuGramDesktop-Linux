@@ -69,21 +69,64 @@ jobs:
       - name: Fix File Permissions
         run: sudo chown -R $USER:$USER out/
 
-      # Step 7: Create the Debian package structure
+     # Step 7: Create the Debian package structure with AppStream & Assets
       - name: Prepare Debian Package Directory
         run: |
           mkdir -p pkgroot/usr/bin
           mkdir -p pkgroot/DEBIAN
-          
-          # Copy binary and set executable permissions
-          cp out/Release/AyuGram pkgroot/usr/bin/
-          chmod +x pkgroot/usr/bin/AyuGram
-          
-          # Strip the binary to reduce file size
-          strip pkgroot/usr/bin/AyuGram
+          mkdir -p pkgroot/usr/share/applications
+          mkdir -p pkgroot/usr/share/icons/hicolor
+          mkdir -p pkgroot/usr/share/metainfo
 
-          # Create the control file with cross-distro dependencies
-          # Version set to 6.3.10 as requested
+          # 1. Copy binary and set as ayugram-desktop
+          cp out/Release/AyuGram pkgroot/usr/bin/ayugram-desktop
+          chmod +x pkgroot/usr/bin/ayugram-desktop
+          strip pkgroot/usr/bin/ayugram-desktop
+
+          # 2. Create the .desktop file (using your flatpak settings)
+          cat <<EOF > pkgroot/usr/share/applications/ayugram.desktop
+          [Desktop Entry]
+          Name=AyuGram Desktop
+          Comment=Desktop version of AyuGram - ToS breaking Telegram client
+          Exec=/usr/bin/ayugram-desktop -- %u
+          Icon=com.ayugram.desktop
+          Terminal=false
+          StartupWMClass=AyuGram
+          Type=Application
+          Categories=Chat;Network;InstantMessaging;Qt;
+          MimeType=x-scheme-handler/tg;x-scheme-handler/tonsite;
+          Keywords=tg;chat;im;messaging;messenger;sms;telegram;tdesktop;
+          Actions=quit;
+          SingleMainWindow=true
+          X-GNOME-UsesNotifications=true
+          X-GNOME-SingleWindow=true
+
+          [Desktop Action quit]
+          Exec=/usr/bin/ayugram-desktop -quit
+          Name=Quit AyuGram
+          Icon=application-exit
+          EOF
+
+          # 3. Copy AppStream Metainfo (for Software Center support)
+          # Path: docs/assets/flatpak-files/usr/share/metainfo/com.ayugram.desktop.metainfo.xml
+          META_PATH="docs/assets/flatpak-files/usr/share/metainfo/com.ayugram.desktop.metainfo.xml"
+          if [ -f "$META_PATH" ]; then
+            cp "$META_PATH" pkgroot/usr/share/metainfo/com.ayugram.desktop.metainfo.xml
+            echo "Metainfo copied."
+          fi
+
+          # 4. Copy Icons (Merging hicolor structure)
+          ICON_ASSETS="docs/assets/dev-files/usr/share/icons/hicolor"
+          if [ -d "$ICON_ASSETS" ]; then
+            cp -a $ICON_ASSETS/. pkgroot/usr/share/icons/hicolor/
+          else
+            # Fallback to flatpak-files icons
+            if [ -d "docs/assets/flatpak-files/usr/share/icons/hicolor" ]; then
+              cp -a docs/assets/flatpak-files/usr/share/icons/hicolor/. pkgroot/usr/share/icons/hicolor/
+            fi
+          fi
+
+          # 5. Create the control file
           cat <<EOF > pkgroot/DEBIAN/control
           Package: ayugram-desktop
           Version: 6.3.10
@@ -94,7 +137,7 @@ jobs:
           Depends: libc6 (>= 2.34), libstdc++6 (>= 12), libglib2.0-0 | libglib2.0-0t64, libgcc-s1, libwayland-client0, libpulse0
           Description: AyuGram Desktop Client. 
            Optimized build for Debian 13 and Ubuntu. 
-           This package uses dual dependency logic for better compatibility.
+           Full support for GNOME Software Center, Tray Icons, and AppStream.
           EOF
 
       # Step 8: Pack the files into a .deb archive
