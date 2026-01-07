@@ -73,8 +73,10 @@ jobs:
                             -D TDESKTOP_API_ID=$API_ID \
                             -D TDESKTOP_API_HASH=$API_HASH \
                             -D USE_CCACHE=ON"
-
-      # Step 6: Reduce file size
+      # Step 6.1: Fix File Permissions
+      - name: Fix File Permissions
+        run: sudo chown -R $USER:$USER out/
+      # Step 6.2 : Reduce file size
       - name: Strip Binary
         run: strip out/Release/AyuGram
 
