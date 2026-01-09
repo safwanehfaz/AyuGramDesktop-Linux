@@ -5,7 +5,7 @@ TryExec=ayugram-desktop
 Exec=env DESKTOPINTEGRATION=1 ayugram-desktop -- %u
 Icon=com.ayugram.desktop
 Terminal=false
-StartupWMClass=AyuGram
+StartupWMClass=AyuGramDesktop
 Type=Application
 Categories=Chat;Network;InstantMessaging;Qt;
 MimeType=x-scheme-handler/tg;x-scheme-handler/tonsite;
