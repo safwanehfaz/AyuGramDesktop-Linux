@@ -84,14 +84,14 @@ jobs:
           strip pkgroot/usr/bin/ayugram-desktop
 
           # 2. Create the .desktop file (using your flatpak settings)
-          cat <<EOF > pkgroot/usr/share/applications/ayugram.desktop
+          cat <<EOF > pkgroot/usr/share/applications/com.ayugram.desktop.desktop
           [Desktop Entry]
           Name=AyuGram Desktop
           Comment=Desktop version of AyuGram - ToS breaking Telegram client
           Exec=/usr/bin/ayugram-desktop -- %u
           Icon=com.ayugram.desktop
           Terminal=false
-          StartupWMClass=AyuGram
+          StartupWMClass=AyuGramDesktop
           Type=Application
           Categories=Chat;Network;InstantMessaging;Qt;
           MimeType=x-scheme-handler/tg;x-scheme-handler/tonsite;
