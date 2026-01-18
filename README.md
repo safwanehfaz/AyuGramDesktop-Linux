@@ -1,8 +1,36 @@
-# AyuGram
+# AyuGram (Optimized Build for Debian and Ubuntu)
 
 ![AyuGram Logo](.github/AyuGram.png) ![AyuChan](.github/AyuChan.png)
 
-[ English  |   [Русский](README-RU.md) ]
+This is an optimized build of [AyuGramDesktop](https://github.com/AyuGram/AyuGramDesktop)
+for [Debian](https://www.debian.org/) and [Ubuntu](https://ubuntu.com/) based systems.
+
+To use this repository build, you can install it from the
+[Releases](https://github.com/qxoerx/AyuGramDesktop-Linux/releases) tab.
+
+## Installation
+
+### Installation Instructions
+
+1. **Download the Package** Download the latest `.deb` file from the [Releases Page](https://github.com/qxoerx/AyuGramDesktop-Linux/releases/latest).
+
+2. **Install via Terminal** Navigate to your downloads folder, open your terminal,
+   and run:
+
+   ```bash
+   sudo apt install ./ayugram-desktop_*.deb
+   ```
+
+3. Open AyuGram and start using it!
+
+<details>
+<summary><strong>Click to expand for official information from the AyuGram team.</strong></summary>
+
+## AyuGram
+
+![AyuGram Logo](.github/AyuGram.png) ![AyuChan](.github/AyuChan.png)
+
+[ English | [Русский](README-RU.md) ]
 
 ## Features
 
@@ -41,7 +69,8 @@ And many more. Check out our [Documentation](https://docs.ayugram.one/desktop/).
 
 #### Official
 
-You can download prebuilt Windows binary from [Releases tab](https://github.com/AyuGram/AyuGramDesktop/releases) or from
+You can download prebuilt Windows binary from
+[Releases tab](https://github.com/AyuGram/AyuGramDesktop/releases) or from
 the [Telegram channel](https://t.me/AyuGramReleases).
 
 #### Winget
@@ -104,7 +133,7 @@ See [this repository](https://github.com/OverLessArtem/ayugram-ebuild-gentoo) fo
 
 ### Any other Linux distro
 
-Flatpak: https://github.com/0FL01/AyuGramDesktop-flatpak
+Flatpak: <https://github.com/0FL01/AyuGramDesktop-flatpak>
 
 Or follow the [official guide](https://github.com/AyuGram/AyuGramDesktop/blob/dev/docs/building-linux.md).
 
@@ -145,3 +174,5 @@ Enjoy using **AyuGram**? Consider sending us a tip!
 ### Bots
 
 - [TelegramDB](https://t.me/tgdatabase) for username lookup by ID
+
+</details>
