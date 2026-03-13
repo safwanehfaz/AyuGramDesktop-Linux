@@ -71,7 +71,7 @@ jobs:
       # Step 7: Upload files to Telegram
       - name: Upload files to Telegram
         id: upload
-        uses: xz-dev/TelegramFileUploader@v1.2.3
+        uses: xz-dev/TelegramFileUploader@main
         with:
             to-who: '-1003401298773'
             message: 'Here are your files!'
