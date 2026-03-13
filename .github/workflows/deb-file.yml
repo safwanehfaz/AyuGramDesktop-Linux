@@ -1,0 +1,75 @@
+name: Build AyuGram Debian package
+
+on:
+  workflow_dispatch: # Allows manual run from the Actions tab
+  push:
+
+jobs:
+  build-deb:
+    name: Build .deb for Debian Trixie
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # Step 1: Clean up and checkout the code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      # Step 2: Clear space to prevent "Disk Full" errors
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          docker-images: true
+
+      # Step 3: Verify if API credentials are set in Secrets
+      - name: Verify Secrets
+        run: |
+          if [ -z "${{ secrets.API_ID }}" ] || [ -z "${{ secrets.API_HASH }}" ]; then
+            echo "::error:: API_ID or API_HASH secret is missing!"
+            exit 1
+          fi
+
+      # Step 4: Setup Caching to speed up future builds
+      - name: Setup Cache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ${{ runner.os }}-deb-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-deb-ccache-
+
+      # Step 5: Build AyuGram inside Docker container (Official Environment)
+      - name: Build Binary in Docker
+        env:
+          API_ID: ${{ secrets.API_ID }}
+          API_HASH: ${{ secrets.API_HASH }}
+        run: |
+          mkdir -p .ccache
+          chmod 777 .ccache
+          docker run --rm \
+            -u 0 \
+            -v "$PWD:/usr/src/tdesktop" \
+            -v "$PWD/.ccache:/ccache" \
+            ghcr.io/telegramdesktop/tdesktop/centos_env:latest \
+            /bin/bash -c "dnf install -y ccache && \
+                          export CCACHE_DIR=/ccache && \
+                          /usr/src/tdesktop/Telegram/build/docker/centos_env/build.sh \
+                            -D TDESKTOP_API_ID=$API_ID \
+                            -D TDESKTOP_API_HASH=$API_HASH \
+                            -D USE_CCACHE=ON"
+
+      # Step 6: Fix permissions so GitHub Runner can access root-owned files
+      - name: Fix File Permissions
+        run: sudo chown -R $USER:$USER out/
+
+      # Step 9: Upload the final .deb file as an artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ayugram-deb-file
+          path: out/*

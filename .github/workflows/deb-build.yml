@@ -3,8 +3,6 @@ name: Build AyuGram Debian package
 on:
   workflow_dispatch: # Allows manual run from the Actions tab
   push:
-    tags:
-      - 'v*' # Triggers build when you push a version tag like v6.3.10
 
 jobs:
   build-deb:
