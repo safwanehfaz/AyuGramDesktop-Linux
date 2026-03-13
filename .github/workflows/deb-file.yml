@@ -1,4 +1,4 @@
-name: Build AyuGram Debian package
+name: Build AyuGram Debian Binary file
 
 on:
   workflow_dispatch: # Allows manual run from the Actions tab
