@@ -67,6 +67,23 @@ jobs:
       - name: Fix File Permissions
         run: sudo chown -R $USER:$USER out/
 
+      # Step 7: Upload files to Telegram
+      - name: Upload files to Telegram
+        id: upload
+        uses: xz-dev/TelegramFileUploader@v1.2.3
+        with:
+            to-who: '-1003401298773'
+            message: 'Here are your files!'
+            files: |
+                out/*
+        env:
+            API_ID: ${{ secrets.API_TG_ID }}
+            API_HASH: ${{ secrets.API_TG_HASH }}
+            BOT_TOKEN: ${{ secrets.BOT_TG_TOKEN }}
+
+      - name: Print message URL
+        run: echo "Uploaded to ${{ steps.upload.outputs.message_url }}"  
+
       # Step 7: Upload the final .deb file as an artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
