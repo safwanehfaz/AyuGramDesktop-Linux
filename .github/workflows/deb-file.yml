@@ -67,8 +67,35 @@ jobs:
       # Step 6: Fix permissions so GitHub Runner can access root-owned files
       - name: Fix File Permissions
         run: sudo chown -R $USER:$USER out/
+        
+      # Step 6b: Zip the output files
+      - name: Zip Output Files
+        run: |
+          cd out
+          zip -r ayugram-build.zip .
+          cd ..
+          ls -lh out/ayugram-build.zip
+        
+      # Step 7: Build and Run Telegram Uploader Docker Image locally
+      - name: Upload files to Telegram
+        env:
+          API_ID: ${{ secrets.API_TG_ID }}
+          API_HASH: ${{ secrets.API_TG_HASH }}
+          BOT_TOKEN: ${{ secrets.BOT_TG_TOKEN }}
+        run: |
+          # Run the container with mounted workspace
+          docker run --rm \
+            -e API_ID="${{ secrets.API_TG_ID }}" \
+            -e API_HASH="${{ secrets.API_TG_HASH }}" \
+            -e BOT_TOKEN="${{ secrets.BOT_TG_TOKEN }}" \
+            -v "${{ github.workspace }}/out:/github/workspace/out" \
+            ghcr.io/safwanehfaz/tgfileup:latest \
+            tgfileup \
+            --to "-1003401298773" \
+            --message "Here are your files!" \
+            --files /github/workspace/out/ayugram-build.zip  
 
-      # Step 7: Upload the final .deb file as an artifact
+      # Step 8: Upload the final .deb file as an artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
