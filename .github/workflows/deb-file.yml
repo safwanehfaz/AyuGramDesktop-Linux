@@ -83,10 +83,17 @@ jobs:
           docker build -t local-tg-uploader .
           cd ..
           
-          # Expand glob pattern on host and pass to container
-          FILES=$(find "${{ github.workspace }}/out" -type f -printf '%f ' 2>/dev/null)
+          # Find only .deb files to avoid filename length issues
+          DEB_FILES=$(find "${{ github.workspace }}/out" -maxdepth 1 -type f -name "*.deb" -printf '/github/workspace/%f\n' | tr '\n' ' ')
           
-          # Run the container with expanded file list
+          # Check if we found any .deb files
+          if [ -z "$DEB_FILES" ]; then
+            echo "No .deb files found in out/ directory. Checking available files:"
+            ls -lah "${{ github.workspace }}/out/" | head -20
+            exit 1
+          fi
+          
+          # Run the container with .deb files only
           docker run --rm \
             -e API_ID=$API_ID \
             -e API_HASH=$API_HASH \
@@ -96,7 +103,7 @@ jobs:
             local-tg-uploader \
             --to "-1003401298773" \
             --message "Here are your files!" \
-            --files "$FILES"  
+            --files $DEB_FILES  
 
       # Step 7: Upload the final .deb file as an artifact
       - name: Upload Artifact
