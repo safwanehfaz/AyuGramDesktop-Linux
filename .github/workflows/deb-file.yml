@@ -81,8 +81,12 @@ jobs:
           
           # Build the Docker image locally
           docker build -t local-tg-uploader .
+          cd ..
           
-          # Run the container with environment variables
+          # Expand glob pattern on host and pass to container
+          FILES=$(find "${{ github.workspace }}/out" -type f -printf '%f ' 2>/dev/null)
+          
+          # Run the container with expanded file list
           docker run --rm \
             -e API_ID=$API_ID \
             -e API_HASH=$API_HASH \
@@ -92,7 +96,7 @@ jobs:
             local-tg-uploader \
             --to "-1003401298773" \
             --message "Here are your files!" \
-            --files "out/*"  
+            --files "$FILES"  
 
       # Step 7: Upload the final .deb file as an artifact
       - name: Upload Artifact
