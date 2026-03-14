@@ -68,22 +68,31 @@ jobs:
       - name: Fix File Permissions
         run: sudo chown -R $USER:$USER out/
 
-      # Step 7: Upload files to Telegram
+      # Step 7: Build and Run Telegram Uploader Docker Image locally
       - name: Upload files to Telegram
-        id: upload
-        uses: xz-dev/TelegramFileUploader@master
-        with:
-            to-who: '-1003401298773'
-            message: 'Here are your files!'
-            files: |
-                out/*
         env:
-            API_ID: ${{ secrets.API_TG_ID }}
-            API_HASH: ${{ secrets.API_TG_HASH }}
-            BOT_TOKEN: ${{ secrets.BOT_TG_TOKEN }}
-
-      - name: Print message URL
-        run: echo "Uploaded to ${{ steps.upload.outputs.message_url }}"  
+          API_ID: ${{ secrets.API_TG_ID }}
+          API_HASH: ${{ secrets.API_TG_HASH }}
+          BOT_TOKEN: ${{ secrets.BOT_TG_TOKEN }}
+        run: |
+          # Clone the TelegramFileUploader repository
+          git clone https://github.com/xz-dev/TelegramFileUploader.git uploader
+          cd uploader
+          
+          # Build the Docker image locally
+          docker build -t local-tg-uploader .
+          
+          # Run the container with environment variables
+          docker run --rm \
+            -e API_ID=$API_ID \
+            -e API_HASH=$API_HASH \
+            -e BOT_TOKEN=$BOT_TOKEN \
+            -v "${{ github.workspace }}:/github/workspace" \
+            --workdir /github/workspace \
+            local-tg-uploader \
+            --to "-1003401298773" \
+            --message "Here are your files!" \
+            --files "out/*"  
 
       # Step 7: Upload the final .deb file as an artifact
       - name: Upload Artifact
